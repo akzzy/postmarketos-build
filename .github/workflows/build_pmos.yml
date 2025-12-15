@@ -20,31 +20,22 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y openssl git
-          # Install master branch to get latest device support
           pip install git+https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git@master
 
-      - name: Configure pmbootstrap
+      - name: Initialize pmbootstrap (Correctly)
         run: |
-          # 1. Run a dummy init to download pmaports and setup default paths
-          # We pipe 'yes' to accept all defaults (QEMU device, edge channel)
-          yes "" | pmbootstrap init
-
-          # 2. Switch the device to Poco F1 (Beryllium)
-          # Setting 'device' automatically sets the vendor to 'xiaomi'
-          pmbootstrap config device beryllium
-
-          # 3. Configure User Interface and Hostname
-          pmbootstrap config ui phosh
-          pmbootstrap config hostname poco
-          pmbootstrap config timezone "Asia/Kolkata"
+          # We feed the exact answers to init using printf.
+          # Order: Channel -> Vendor -> Device -> User -> Provider -> UI -> Systemd -> Change Opts -> Extra Pkgs -> Timezone? -> TZ -> Locale -> Hostname -> Build Outdated
           
-          # 4. Force download of Poco F1 specific packages
-          pmbootstrap pull
+          printf "edge\nxiaomi\nberyllium\nuser\ndefault\nphosh\ndefault\nn\nnone\ny\nAsia/Kolkata\nen_US\npoco\ny\n" | pmbootstrap init
 
       - name: Build RootFS (Tianma Kernel + Reg Tools)
         run: |
-          # We force the 'tianma' kernel package to prevent the screen issue.
-          # We include 'iw' and 'wireless-regdb' to fix the 5GHz region crash.
+          # 1. Update the repos to be safe
+          pmbootstrap pull
+          
+          # 2. Build the image
+          # We explicitly add the Tianma Kernel and Regulatory tools here.
           pmbootstrap install \
             --filesystem f2fs \
             --add "iw,wireless-regdb,nano,macchanger,modemmanager,device-xiaomi-beryllium-kernel-tianma" \
@@ -53,7 +44,6 @@ jobs:
       - name: Export Images
         run: |
           pmbootstrap export
-          # Rename files so you know which one is which
           cd /tmp/postmarketOS-export
           mv boot.img boot-tianma.img
           mv xiaomi-beryllium.img userdata-phosh.img
