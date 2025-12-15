@@ -22,11 +22,13 @@ jobs:
           sudo apt-get install -y openssl git
           pip install git+https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git@master
 
-      - name: Initialize pmbootstrap (Correctly)
+      - name: Initialize pmbootstrap (Exact Input Match)
         run: |
-          # This automatically inputs the answers: 
-          # Edge -> Xiaomi -> Beryllium -> User -> Default -> Phosh -> Default -> No Change -> NONE (Extra pkgs later) -> Yes (TZ) -> Asia/Kolkata -> en_US -> poco -> Yes (Build outdated)
-          printf "edge\nxiaomi\nberyllium\nuser\ndefault\nphosh\ndefault\nn\nnone\ny\nAsia/Kolkata\nen_US\npoco\ny\n" | pmbootstrap init
+          # We send empty lines (\n) for the first two path questions.
+          # Then we send the exact sequence you used locally.
+          # Note: I kept Timezone as 'Asia/Kolkata' (y) because it helps the 5GHz fix.
+          
+          printf "\n\nedge\nxiaomi\nberyllium\ntianma\nuser\n\nphosh\n\nn\niw,wireless-regdb,nano,macchanger,modemmanager\ny\nAsia/Kolkata\nen_US\npoco\ny\n" | pmbootstrap init
 
       - name: Build RootFS (Tianma Kernel + Reg Tools)
         run: |
@@ -41,8 +43,12 @@ jobs:
         run: |
           pmbootstrap export
           cd /tmp/postmarketOS-export
+          
+          # Rename for clarity
           mv boot.img boot-tianma.img
           mv xiaomi-beryllium.img userdata-phosh.img
+          
+          # Create ZIP
           zip -r poco-f1-images.zip boot-tianma.img userdata-phosh.img
 
       - name: Upload Artifact
