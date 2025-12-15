@@ -14,15 +14,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install pmbootstrap
         run: |
           sudo apt-get update
-          sudo apt-get install -y openssl git python3-pip
-          pip3 install pmbootstrap
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
+          sudo apt-get install -y openssl git
+          # FIX: Install directly from GitLab because PyPI versions are yanked
+          pip install git+https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git@master
+          
       - name: Initialize pmbootstrap
         run: |
           pmbootstrap init \
@@ -38,7 +38,7 @@ jobs:
       - name: Build RootFS (with Tianma Kernel & Regulatory Tools)
         run: |
           # We explicitly add 'device-xiaomi-beryllium-kernel-tianma' to force the variant selection.
-          # We also add the regulatory tools to fix the 5GHz crash.
+          # We add 'iw' and 'wireless-regdb' to fix the 5GHz crash.
           pmbootstrap install \
             --filesystem f2fs \
             --add "iw,wireless-regdb,nano,macchanger,modemmanager,device-xiaomi-beryllium-kernel-tianma" \
@@ -62,4 +62,4 @@ jobs:
         with:
           name: poco-f1-images
           path: /tmp/postmarketOS-export/poco-f1-pmos-tianma.zip
-          compression-level: 0 # Already zipped
+          compression-level: 0
