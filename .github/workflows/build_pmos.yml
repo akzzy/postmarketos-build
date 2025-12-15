@@ -1,0 +1,65 @@
+name: Build PostmarketOS for Poco F1
+
+on:
+  workflow_dispatch: # Allows you to manually trigger the build
+
+jobs:
+  build:
+    name: Build Poco F1 (Tianma) Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install pmbootstrap
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssl git python3-pip
+          pip3 install pmbootstrap
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Initialize pmbootstrap
+        run: |
+          pmbootstrap init \
+            --vendor xiaomi \
+            --device beryllium \
+            --channel edge \
+            --ui phosh \
+            --hostname poco \
+            --user user \
+            --no-fde \
+            --timezone "Asia/Kolkata"
+
+      - name: Build RootFS (with Tianma Kernel & Regulatory Tools)
+        run: |
+          # We explicitly add 'device-xiaomi-beryllium-kernel-tianma' to force the variant selection.
+          # We also add the regulatory tools to fix the 5GHz crash.
+          pmbootstrap install \
+            --filesystem f2fs \
+            --add "iw,wireless-regdb,nano,macchanger,modemmanager,device-xiaomi-beryllium-kernel-tianma" \
+            --password "147147"
+
+      - name: Export Images
+        run: |
+          pmbootstrap export
+          # Navigate to export folder and rename files for clarity
+          cd /tmp/postmarketOS-export
+          mv boot.img boot-tianma.img
+          mv xiaomi-beryllium.img userdata-phosh.img
+
+      - name: Create Flashable Zip
+        run: |
+          cd /tmp/postmarketOS-export
+          zip -r poco-f1-pmos-tianma.zip boot-tianma.img userdata-phosh.img
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: poco-f1-images
+          path: /tmp/postmarketOS-export/poco-f1-pmos-tianma.zip
+          compression-level: 0 # Already zipped
