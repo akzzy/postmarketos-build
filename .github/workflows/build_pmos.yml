@@ -1,7 +1,7 @@
 name: Build PostmarketOS for Poco F1
 
 on:
-  workflow_dispatch: # Allows you to manually trigger the build
+  workflow_dispatch:
 
 jobs:
   build:
@@ -24,18 +24,14 @@ jobs:
 
       - name: Initialize pmbootstrap (Correctly)
         run: |
-          # We feed the exact answers to init using printf.
-          # Order: Channel -> Vendor -> Device -> User -> Provider -> UI -> Systemd -> Change Opts -> Extra Pkgs -> Timezone? -> TZ -> Locale -> Hostname -> Build Outdated
-          
+          # This automatically inputs the answers: 
+          # Edge -> Xiaomi -> Beryllium -> User -> Default -> Phosh -> Default -> No Change -> NONE (Extra pkgs later) -> Yes (TZ) -> Asia/Kolkata -> en_US -> poco -> Yes (Build outdated)
           printf "edge\nxiaomi\nberyllium\nuser\ndefault\nphosh\ndefault\nn\nnone\ny\nAsia/Kolkata\nen_US\npoco\ny\n" | pmbootstrap init
 
       - name: Build RootFS (Tianma Kernel + Reg Tools)
         run: |
-          # 1. Update the repos to be safe
           pmbootstrap pull
-          
-          # 2. Build the image
-          # We explicitly add the Tianma Kernel and Regulatory tools here.
+          # Force Tianma Kernel and Regulatory Tools
           pmbootstrap install \
             --filesystem f2fs \
             --add "iw,wireless-regdb,nano,macchanger,modemmanager,device-xiaomi-beryllium-kernel-tianma" \
@@ -47,15 +43,10 @@ jobs:
           cd /tmp/postmarketOS-export
           mv boot.img boot-tianma.img
           mv xiaomi-beryllium.img userdata-phosh.img
-
-      - name: Create Flashable Zip
-        run: |
-          cd /tmp/postmarketOS-export
-          zip -r poco-f1-pmos-tianma.zip boot-tianma.img userdata-phosh.img
+          zip -r poco-f1-images.zip boot-tianma.img userdata-phosh.img
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: poco-f1-images
-          path: /tmp/postmarketOS-export/poco-f1-pmos-tianma.zip
-          compression-level: 0
+          path: /tmp/postmarketOS-export/poco-f1-images.zip
