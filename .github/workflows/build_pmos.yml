@@ -20,25 +20,29 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y openssl git
-          # FIX: Install directly from GitLab because PyPI versions are yanked
+          # Install directly from GitLab
           pip install git+https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git@master
           
-      - name: Initialize pmbootstrap
+      - name: Initialize pmbootstrap (Workaround)
         run: |
-          pmbootstrap init \
-            --vendor xiaomi \
-            --device beryllium \
-            --channel edge \
-            --ui phosh \
-            --hostname poco \
-            --user user \
-            --no-fde \
-            --timezone "Asia/Kolkata"
+          # 1. Run init non-interactively to generate a default config
+          # "yes ''" simulates pressing Enter for every question
+          yes "" | pmbootstrap init
 
-      - name: Build RootFS (with Tianma Kernel & Regulatory Tools)
+          # 2. Manually overwrite the config with Poco F1 settings
+          pmbootstrap config channel edge
+          pmbootstrap config vendor xiaomi
+          pmbootstrap config device beryllium
+          pmbootstrap config ui phosh
+          pmbootstrap config hostname poco
+          pmbootstrap config timezone "Asia/Kolkata"
+          
+          # 3. Download the specific packages for this device
+          pmbootstrap pull
+
+      - name: Build RootFS (Tianma Kernel & Regulatory Tools)
         run: |
-          # We explicitly add 'device-xiaomi-beryllium-kernel-tianma' to force the variant selection.
-          # We add 'iw' and 'wireless-regdb' to fix the 5GHz crash.
+          # --add includes the Regulatory tools (iw, wireless-regdb) AND the Tianma kernel
           pmbootstrap install \
             --filesystem f2fs \
             --add "iw,wireless-regdb,nano,macchanger,modemmanager,device-xiaomi-beryllium-kernel-tianma" \
