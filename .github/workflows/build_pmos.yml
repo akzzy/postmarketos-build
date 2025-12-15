@@ -22,18 +22,39 @@ jobs:
           sudo apt-get install -y openssl git
           pip install git+https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git@master
 
-      - name: Initialize pmbootstrap (Exact Input Match)
+      - name: Initialize pmbootstrap (Simplified)
         run: |
-          # We send empty lines (\n) for the first two path questions.
-          # Then we send the exact sequence you used locally.
-          # Note: I kept Timezone as 'Asia/Kolkata' (y) because it helps the 5GHz fix.
+          # We send MINIMAL answers. 
+          # We say 'none' for extra packages (we add them later).
+          # We say 'n' for Timezone (use default GMT).
+          # We hit Enter for Locale (use default).
           
-          printf "\n\nedge\nxiaomi\nberyllium\ntianma\nuser\n\nphosh\n\nn\niw,wireless-regdb,nano,macchanger,modemmanager\ny\nAsia/Kolkata\nen_US\npoco\ny\n" | pmbootstrap init
+          # Sequence:
+          # 1. Work Path (Enter)
+          # 2. Pmaports (Enter)
+          # 3. Channel (edge)
+          # 4. Vendor (xiaomi)
+          # 5. Device (beryllium)
+          # 6. Kernel (tianma)
+          # 7. User (user)
+          # 8. Provider (Enter/Default)
+          # 9. UI (phosh)
+          # 10. Systemd (Enter/Default)
+          # 11. Change Opts? (n)
+          # 12. Extra Pkgs (none)
+          # 13. Timezone? (n)
+          # 14. Locale (Enter/Default)
+          # 15. Hostname (poco)
+          # 16. Build outdated? (y)
+          
+          printf "\n\nedge\nxiaomi\nberyllium\ntianma\nuser\n\nphosh\n\nn\nnone\nn\n\npoco\ny\n" | pmbootstrap init
 
-      - name: Build RootFS (Tianma Kernel + Reg Tools)
+      - name: Build RootFS (The Real Fix)
         run: |
           pmbootstrap pull
-          # Force Tianma Kernel and Regulatory Tools
+          
+          # THIS IS WHERE WE FIX THE WIFI.
+          # We force 'iw' and 'wireless-regdb' to be added here, bypassing the init confusion.
           pmbootstrap install \
             --filesystem f2fs \
             --add "iw,wireless-regdb,nano,macchanger,modemmanager,device-xiaomi-beryllium-kernel-tianma" \
@@ -44,11 +65,9 @@ jobs:
           pmbootstrap export
           cd /tmp/postmarketOS-export
           
-          # Rename for clarity
+          # Rename and Zip
           mv boot.img boot-tianma.img
           mv xiaomi-beryllium.img userdata-phosh.img
-          
-          # Create ZIP
           zip -r poco-f1-images.zip boot-tianma.img userdata-phosh.img
 
       - name: Upload Artifact
